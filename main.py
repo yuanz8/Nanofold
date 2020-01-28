@@ -29,13 +29,13 @@ import tensorflow as tf
 import tensorflow.keras.optimizers as opt
 import tensorflow.keras.losses as loss
 import lib.FindDevices as fd
-from lib.NeuralNet import NeuralNet
+from lib.NeuralNet import NeuralNet # FIXME: modify changes on this file related to import
 
 # This will be a string input statement
 seq = "."
-proteinSequence = []
+proteinSequence = [] # FIXME: replace the '[]' with the output
 resNet = NeuralNet()
-# FIXME: replace the '[]' with the output
+
 
 def final_output(distance, angle):
     with tf.device(fd.getChosenDevice("GPU", 0)):
