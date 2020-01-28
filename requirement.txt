@@ -1,0 +1,6 @@
+tensorflow-gpu==1.15
+numpy
+mdtraj
+mdanalysis
+matplotlib
+seaborn
