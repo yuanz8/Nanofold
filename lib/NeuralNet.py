@@ -9,9 +9,11 @@ import math
 import tensorflow.keras.activations as act
 import numpy as np
 '''
-Sequence to Sequence model
+Sequence to Sequence model:
+This model could be improved by using functions specifically tied to 
+tensorflow but for learning how the functions of the model work.
 '''
-
+'''
 class Highway(layers.Layer): # FIXME: decide to delete or keep
 
   def __init__(self, units=32):
@@ -42,7 +44,7 @@ class Highway(layers.Layer): # FIXME: decide to delete or keep
     c_function = tf.constant(1.) - t_function # (32,100)
     # FIXME: inputs * c_function are the wrong shape
     return c_function#tf.multiply(h_function, t_function) + tf.matmul(tf.transpose(inputs), c_function)
-
+'''
 class Blocks(): # Contains esidual blocks
     # This class is responsible of generating
     # layers and output size
@@ -102,6 +104,39 @@ class EncoderLayer(layers.Layer):
                   state_9, state_10, state_11, state_12, state_13, state_14, state_15]
         return states
 
+class RNN_Layer(layers.Layer):
+    def __init__(self, seq_length=37, type="UNKNOWN"):
+        self.blocks = Blocks(layer_type="RNN_layer_"+type)
+        self.seq_length = seq_length
+
+    def embed_layer(self, units=64, e_inputs=None):
+        # Embeds the inputs and converts them into vectors
+        # for the hidden layers to interpret
+        return layers.Embedding(input_dim=self.seq_length, output_dim=units)(e_inputs)
+
+    # The hidden layers in the encoder sequence
+    def recurrent_layer(self, prev_vector=None):
+        # TODO: Automate the process of creation
+        encoderVec, state_0 = self.blocks.encoder_residualBlock(prev_vector, num_nodes_LSTM=32, layer_name="E-RRN-lay0")
+        encoderVec, state_1 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=32, layer_name="E-RRN-lay1")
+        encoderVec, state_2 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=64, layer_name="E-RRN-lay2")
+        encoderVec, state_3 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=64, layer_name="E-RRN-lay3")
+        encoderVec, state_4 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=128, layer_name="E-RRN-lay4")
+        encoderVec, state_5 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=128, layer_name="E-RRN-lay5")
+        encoderVec, state_6 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=256, layer_name="E-RRN-lay6")
+        encoderVec, state_7 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=256, layer_name="E-RRN-lay7")
+        encoderVec, state_8 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=128, layer_name="E-RRN-lay8")
+        encoderVec, state_9 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=128, layer_name="E-RRN-lay9")
+        encoderVec, state_10 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=64, layer_name="E-RRN-lay10")
+        encoderVec, state_11 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=64, layer_name="E-RRN-lay11")
+        encoderVec, state_12 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=32, layer_name="E-RRN-lay12")
+        encoderVec, state_13 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=32, layer_name="E-RNN-lay13")
+        encoderVec, state_14 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=10, layer_name="E-RRN-lay14")
+        encoderVec, state_15 = self.blocks.encoder_residualBlock(encoderVec, num_nodes_LSTM=10, layer_name="E-RRN-lay15")
+        states = [state_0, state_1, state_2, state_3, state_4, state_5, state_6, state_7, state_8,
+                  state_9, state_10, state_11, state_12, state_13, state_14, state_15]
+        return states
+
 class DecoderLayer(layers.Layer):
     def __init__(self, seq_length=37, states=None, type="UNKNOWN"):
         self.decode_NN = Blocks(layer_type="Decoder_Layer_"+type)
@@ -116,9 +151,12 @@ class DecoderLayer(layers.Layer):
     # The hidden layers in the decoding sequence
     def recurrent_layer(self, states=None, prev_vector=None):
         # TODO: Automate the process of creation
-        decoderVec = self.decode_NN.decoder_residualBlock(prev_vector, encoder_states=states[0], num_nodes_LSTM=32, layer_name="D-RRN-lay0")
-        decoderVec = self.decode_NN.decoder_residualBlock(decoderVec, encoder_states=states[1], num_nodes_LSTM=32, layer_name="D-RRN-lay1")
-        decoderVec = self.decode_NN.decoder_residualBlock(decoderVec, encoder_states=states[2], num_nodes_LSTM=64, layer_name="D-RRN-lay2")
+        decoderVec = self.decode_NN.decoder_residualBlock(prev_vector, encoder_states=states[0]
+                                                          , num_nodes_LSTM=32, layer_name="D-RRN-lay0")
+        decoderVec = self.decode_NN.decoder_residualBlock(decoderVec, encoder_states=states[1]
+                                                          , num_nodes_LSTM=32, layer_name="D-RRN-lay1")
+        decoderVec = self.decode_NN.decoder_residualBlock(decoderVec, encoder_states=states[2]
+                                                          , num_nodes_LSTM=64, layer_name="D-RRN-lay2")
         decoderVec = self.decode_NN.decoder_residualBlock(decoderVec, encoder_states=states[3]
                                                           , num_nodes_LSTM=64, layer_name="D-RRN-lay3")
         decoderVec = self.decode_NN.decoder_residualBlock(decoderVec, encoder_states=states[4]
@@ -164,6 +202,10 @@ class Seq2Seq(object):  # FIXME: Change the name of the class into resNet
 
     # Model for phi angle
     def model_phi(self, encoder_inputs=None, decoder_inputs=None):
+        phi = RNN_Layer(type="Phi")
+        embed_encoder = phi.embed_layer(units=32, e_inputs=encoder_inputs)
+        output = phi.recurrent_layer(prev_vector=embed_encoder)
+        '''
         encoderPhi = EncoderLayer(type="Phi_Angle")
         embed_encoder = encoderPhi.embed_layer(units=32, e_inputs=encoder_inputs)  # TODO: change unit amount
         encoder_states = encoderPhi.recurrent_layer(prev_vector=embed_encoder)
@@ -171,11 +213,15 @@ class Seq2Seq(object):  # FIXME: Change the name of the class into resNet
         decoderPhi = DecoderLayer(type="Phi_Angle")
         embed_decoder = decoderPhi.embed_layer(units=32, d_vectors=decoder_inputs)  # TODO: change unit amount
         decoder_output = decoderPhi.recurrent_layer(states=encoder_states, prev_vector=embed_decoder)
-
-        return decoder_output # returns phi angles
+        '''
+        return output # returns phi angles
 
     # Model for psi angle
     def model_psi(self, encoder_inputs=None, decoder_inputs=None):
+        phi = RNN_Layer(type="Phi")
+        embed_encoder = phi.embed_layer(units=32, e_inputs=encoder_inputs)
+        output = phi.recurrent_layer(prev_vector=embed_encoder)
+        '''
         encoderPsi = EncoderLayer(type="Psi_Angle")
         embed_encoder = encoderPsi.embed_layer(units=32, e_inputs=encoder_inputs)  # TODO: change unit amount
         encoder_states = encoderPsi.recurrent_layer(prev_vector=embed_encoder)
@@ -183,8 +229,9 @@ class Seq2Seq(object):  # FIXME: Change the name of the class into resNet
         decoderPsi = DecoderLayer(type="Psi_Angle")
         embed_decoder = decoderPsi.embed_layer(units=32, d_vectors=decoder_inputs)  # TODO: change unit amount
         decoder_output = decoderPsi.recurrent_layer(states=encoder_states, prev_vector=embed_decoder)
+        '''
 
-        return decoder_output # returns psi angles
+        return output # returns psi angles
 
 class NeuralNetworkTypes(object):
     def __init__(self, sequence):
